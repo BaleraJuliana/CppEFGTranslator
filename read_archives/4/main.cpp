@@ -1,0 +1,546 @@
+/*  Copyright (C) 2008 National Institute For Space Research (INPE) - Brazil.
+
+    This file is part of the TerraLib - a Framework for building GIS enabled applications.
+
+    TerraLib is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License,
+    or (at your option) any later version.
+
+    TerraLib is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with TerraLib. See COPYING. If not, write to
+    TerraLib Team at <terralib-team@terralib.org>.
+ */
+
+/*!
+  \file terralib/plugins/exchanger/DataSetOptionsWizardPage.cpp
+
+  \brief A Qt dialog for ....
+*/
+
+// TerraLib
+#include "../../../dataaccess/dataset/DataSetAdapter.h"
+#include "../../../dataaccess/dataset/DataSetType.h"
+#include "../../../dataaccess/dataset/DataSetTypeConverter.h"
+#include "../../../dataaccess/dataset/Index.h"
+#include "../../../dataaccess/dataset/PrimaryKey.h"
+#include "../../../dataaccess/dataset/UniqueKey.h"
+#include "../../../dataaccess/datasource/DataSourceTransactor.h"
+#include "../../../dataaccess/datasource/DataSourceManager.h"
+#include "../../../dataaccess/utils/Utils.h"
+#include "../../../geometry/GeometryProperty.h"
+#include "../../../qt/widgets/utils/ScopedCursor.h"
+#include "../../../qt/widgets/srs/SRSManagerDialog.h"
+#include "../../../qt/widgets/table/DataSetTableView.h"
+#include "../property/ConstraintsIndexesListWidget.h"
+#include "../property/DataSetAdapterWidget.h"
+#include "DataSetOptionsWizardPage.h"
+#include "ui_DataSetOptionsWizardPageForm.h"
+
+// STL
+#include <algorithm>
+
+// Boost
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/lexical_cast.hpp>
+
+// Qt
+#include <QIcon>
+#include <QMessageBox>
+
+te::qt::widgets::DataSetOptionsWizardPage::DataSetOptionsWizardPage(QWidget* parent)
+  : QWizardPage(parent),
+    m_ui(new Ui::DataSetOptionsWizardPageForm)
+{
+// setup controls
+  m_ui->setupUi(this);
+
+//build form
+  m_constraintWidget.reset(new te::qt::widgets::ConstraintsIndexesListWidget(m_ui->m_constraintWidget));
+  QGridLayout* constraintLayout = new QGridLayout(m_ui->m_constraintWidget);
+  constraintLayout->addWidget(m_constraintWidget.get());
+  constraintLayout->setContentsMargins(0,0,0,0);
+
+  m_dataSetAdapterWidget.reset(new te::qt::widgets::DataSetAdapterWidget(m_ui->m_dataSetWidget));
+  QGridLayout* dataSetLayout = new QGridLayout(m_ui->m_dataSetWidget);
+  dataSetLayout->addWidget(m_dataSetAdapterWidget.get());
+  dataSetLayout->setContentsMargins(0,0,0,0);
+
+  m_ui->m_sridInputPushButton->setIcon(QIcon::fromTheme("srs"));
+  m_ui->m_sridOutputPushButton->setIcon(QIcon::fromTheme("srs"));
+
+  //Adjusting the dataSetTableView that will be used to display the dataset's data
+  m_tblView.reset(new DataSetTableView(m_ui->m_dataPreviewFrame));
+  QGridLayout* dataPreviewLayout = new QGridLayout(m_ui->m_dataPreviewFrame);
+  dataPreviewLayout->addWidget(m_tblView.get());
+  dataPreviewLayout->setContentsMargins(0, 0, 0, 0);
+
+  m_tblView->setAlternatingRowColors(true);
+  m_tblView->verticalHeader()->setVisible(false);
+  m_tblView->setSelectionMode(QAbstractItemView::NoSelection);
+
+  fillCharEncodingTypes();
+
+// connect signals and slots
+  connect(m_ui->m_sridInputPushButton, SIGNAL(clicked()), this, SLOT(sridInputSearchToolButtonPressed()));
+  connect(m_ui->m_sridOutputPushButton, SIGNAL(clicked()), this, SLOT(sridOutputSearchToolButtonPressed()));
+  connect(m_ui->m_applyPushButton, SIGNAL(clicked()), this, SLOT(applyChanges()));
+  connect(m_ui->m_dataPreviewGroupBox, SIGNAL(clicked(bool)), this, SLOT(onDataPreviewGroupBoxClicked()));
+  connect(m_constraintWidget.get(), SIGNAL(constraintsChanged()), this, SLOT(onDataPreviewGroupBoxClicked()));
+  connect(m_dataSetAdapterWidget.get(), SIGNAL(dataSetAdapterChanged()), this, SLOT(onDataPreviewGroupBoxClicked()));
+  connect(m_ui->m_selectedDatasetListWidget, SIGNAL(itemPressed(QListWidgetItem*)), this, SLOT(datasetPressed(QListWidgetItem*)));
+
+  //QCoreApplication* app = QCoreApplication::instance();
+  //connect(app, SIGNAL(focusChanged(QWidget*, QWidget*)), this, SLOT(checkModificationsOnFocusChange(QWidget*, QWidget*)));
+}
+
+te::qt::widgets::DataSetOptionsWizardPage::~DataSetOptionsWizardPage() =
+    default;
+
+void te::qt::widgets::DataSetOptionsWizardPage::set(const std::list<te::da::DataSetTypePtr>& datasets,
+                                                    const te::da::DataSourceInfoPtr& datasource,
+                                                    const te::da::DataSourceInfoPtr& targetDatasource)
+{
+  ScopedCursor wcursor(Qt::WaitCursor);
+
+  m_ui->m_selectedDatasetListWidget->clear();
+
+  clearForm();
+
+  m_datasets.clear();
+
+  m_datasource = datasource;
+  
+  m_targetDatasource = targetDatasource;
+
+  te::da::DataSourcePtr targetDSPtr = te::da::DataSourceManager::getInstance().get(m_targetDatasource->getId(), m_targetDatasource->getType(), m_targetDatasource->getConnInfo()); 
+
+  for(std::list<te::da::DataSetTypePtr>::const_iterator it = datasets.begin(); it != datasets.end(); ++it)
+  {
+    if(it->get() == nullptr)
+      continue;
+
+    if((*it)->size() == 0)
+      te::da::LoadProperties((*it).get(), datasource->getId());
+
+    //create dataset adapter
+    te::da::DataSetTypeConverter* converter = new te::da::DataSetTypeConverter((*it).get(), targetDSPtr->getCapabilities(), targetDSPtr->getEncoding());
+
+    //fix output dataset name
+    std::string name = converter->getResult()->getName();
+
+    std::size_t idx = name.find(".");
+    if (idx != std::string::npos)
+    {
+        name = name.substr(idx + 1, name.size() - 1);
+    }
+
+    converter->getResult()->setName(name);
+
+    //fix primary key name
+    if(converter->getResult() && converter->getResult()->getPrimaryKey())
+    {
+      te::da::PrimaryKey* pk = converter->getResult()->getPrimaryKey();
+      pk->setName(converter->getResult()->getName() + "_pk");
+    }
+
+    m_datasets.insert(std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>::value_type((*it), converter));
+  }
+
+  for(std::list<te::da::DataSetTypePtr>::const_iterator it = datasets.begin(); it != datasets.end(); ++it)
+  {
+    QString title = QString::fromUtf8((*it)->getTitle().c_str());
+
+    QString name = QString::fromUtf8((*it)->getName().c_str());
+
+    if(title.isEmpty())
+      title = name;
+
+    QListWidgetItem* item = new QListWidgetItem(title);
+
+    m_ui->m_selectedDatasetListWidget->addItem(item);
+
+    if(datasets.size() == 1)
+    {
+      m_ui->m_selectedDatasetListWidget->setCurrentItem(item);
+      item->setSelected(true);
+      datasetPressed(item);
+    }
+  }
+
+  if(datasets.size() != 1)
+    setControlsEnabled(false);
+}
+
+const std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>& te::qt::widgets::DataSetOptionsWizardPage::getDatasets() const
+{
+  return m_datasets;
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::showSimpleMode(const bool& mode)
+{
+  m_ui->m_dataSetWidget->setVisible(!mode);
+  m_ui->m_constraintWidget->setVisible(!mode);
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::applyChanges()
+{
+  QListWidgetItem* item = m_ui->m_selectedDatasetListWidget->currentItem();
+
+  if (item == nullptr)
+  {
+    QMessageBox::warning(this, tr("Warning"), tr("Select a dataset first."));
+    return;
+  }
+
+  if (!m_ui->m_sridInputLineEdit->text().isEmpty())
+  {
+    int inputSRID = m_ui->m_sridInputLineEdit->text().toInt();
+    int outputSRID = m_ui->m_sridOutputLineEdit->text().toInt();
+
+    if (inputSRID != outputSRID && outputSRID == TE_UNKNOWN_SRS)
+    {
+      QMessageBox::warning(this, tr("Warning"), tr("Invalid output Layer SRID."));
+      return;
+    }
+
+    if (inputSRID != outputSRID && inputSRID == TE_UNKNOWN_SRS)
+    {
+      QMessageBox::warning(this, tr("Warning"), tr("Invalid input Layer SRID."));
+      return;
+    }
+  }
+
+  std::string dataSetAdapterName = item->text().toUtf8().data();
+
+  std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>::iterator it = m_datasets.begin();
+
+  while(it != m_datasets.end())
+  {
+    if(it->second->getConvertee()->getName() == dataSetAdapterName)
+    {
+      it->second->getResult()->setName(m_ui->m_datasetNameLineEdit->text().trimmed().toUtf8().data());
+      it->second->getResult()->setTitle(m_ui->m_datasetTitleLineEdit->text().trimmed().toUtf8().data());
+
+      //get srid information
+      if (!m_ui->m_sridInputLineEdit->text().isEmpty())
+      {
+        int inputSRID = m_ui->m_sridInputLineEdit->text().toInt();
+
+        int outputSRID = TE_UNKNOWN_SRS;
+
+        if (!m_ui->m_sridOutputLineEdit->text().isEmpty())
+        {
+          outputSRID = m_ui->m_sridOutputLineEdit->text().toInt();
+        }
+
+        te::da::AssociateDataSetTypeConverterSRID(it->second, inputSRID, outputSRID);
+      }
+
+      if(it->second->getResult()->getPrimaryKey())
+      {
+        te::da::PrimaryKey* pk = it->second->getResult()->getPrimaryKey();
+        pk->setName(it->second->getResult()->getName() + "_pk");
+
+        // fill constraints
+        m_constraintWidget->setDataSetType(it->second->getResult());
+      }
+
+      //char encoding
+      std::string charEncodingStr = m_ui->m_encodingComboBox->currentText().toUtf8().data();
+      te::core::EncodingType et = te::core::CharEncoding::getEncodingType(charEncodingStr);
+      it->second->setEncodingType(et);
+
+      previewData(item, true);
+
+      break;
+    }
+    ++it;
+  }
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::sridInputSearchToolButtonPressed()
+{
+  te::qt::widgets::SRSManagerDialog srsDialog(this);
+  srsDialog.setWindowTitle(tr("Choose the SRS"));
+
+  if(srsDialog.exec() != QDialog::Rejected)
+  {
+    std::pair<int, std::string> srid = srsDialog.getSelectedSRS();
+    m_ui->m_sridInputLineEdit->setText(QString::number(srid.first));
+  }
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::sridOutputSearchToolButtonPressed()
+{
+  te::qt::widgets::SRSManagerDialog srsDialog(this);
+  srsDialog.setWindowTitle(tr("Choose the SRS"));
+
+  if (srsDialog.exec() != QDialog::Rejected)
+  {
+    std::pair<int, std::string> srid = srsDialog.getSelectedSRS();
+    m_ui->m_sridOutputLineEdit->setText(QString::number(srid.first));
+  }
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::datasetPressed(QListWidgetItem* item)
+{
+  if(item == nullptr)
+    return;
+
+  std::string dataSetAdapterName = item->text().toUtf8().data();
+
+  std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>::iterator it = m_datasets.begin();
+
+  while(it != m_datasets.end())
+  {
+    if(it->second->getConvertee()->getName() == dataSetAdapterName)
+    {
+      te::da::DataSetType* dataset = it->second->getResult();
+
+      // fill line edits
+      m_ui->m_datasetNameLineEdit->setEnabled(true);
+      m_ui->m_datasetNameLineEdit->setText(QString::fromUtf8(dataset->getName().c_str()));
+
+      m_ui->m_datasetTitleLineEdit->setEnabled(true);
+      m_ui->m_datasetTitleLineEdit->setText(QString::fromUtf8(dataset->getTitle().c_str()));
+
+      if(dataset->hasGeom())
+      {
+        m_ui->m_sridInputPushButton->setEnabled(true);
+        m_ui->m_sridInputLineEdit->clear();
+        m_ui->m_sridInputLineEdit->setEnabled(true);
+
+        m_ui->m_sridOutputPushButton->setEnabled(true);
+        m_ui->m_sridOutputLineEdit->clear();
+        m_ui->m_sridOutputLineEdit->setEnabled(true);
+
+        te::gm::GeometryProperty* geomPropIn = dynamic_cast<te::gm::GeometryProperty*>(it->second->getConvertee()->findFirstPropertyOfType(te::dt::GEOMETRY_TYPE));
+
+        if (geomPropIn)
+        {
+          m_ui->m_sridInputLineEdit->setText(QString::fromUtf8(boost::lexical_cast<std::string>(geomPropIn->getSRID()).c_str()));
+        }
+
+        te::gm::GeometryProperty* geomPropOut = dynamic_cast<te::gm::GeometryProperty*>(dataset->findFirstPropertyOfType(te::dt::GEOMETRY_TYPE));
+
+        if (geomPropOut)
+        {
+          m_ui->m_sridOutputLineEdit->setText(QString::fromUtf8(boost::lexical_cast<std::string>(geomPropOut->getSRID()).c_str()));
+        }
+      }
+      else
+      {
+        m_ui->m_sridInputPushButton->setEnabled(false);
+        m_ui->m_sridInputLineEdit->clear();
+        m_ui->m_sridInputLineEdit->setEnabled(false);
+
+        m_ui->m_sridOutputPushButton->setEnabled(false);
+        m_ui->m_sridOutputLineEdit->clear();
+        m_ui->m_sridOutputLineEdit->setEnabled(false);
+      }
+
+      //set char encoding
+      te::core::EncodingType et = it->second->getEncodingType();
+      int etIndex = m_ui->m_encodingComboBox->findText(te::core::CharEncoding::getEncodingName(et).c_str());
+      m_ui->m_encodingComboBox->setCurrentIndex(etIndex);
+
+      // fill property table
+      m_dataSetAdapterWidget->setAdapterParameters(it->second->getConvertee(), it->second, m_targetDatasource);
+
+      // fill constraints
+      m_constraintWidget->setDataSetType(dataset);
+
+      previewData(item, false);
+
+      break;
+    }
+    ++it;
+  }
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::onDataPreviewGroupBoxClicked()
+{
+  QListWidgetItem* item = m_ui->m_selectedDatasetListWidget->currentItem();
+
+  if (!item)
+    return;
+
+  previewData(item, true);
+}
+
+//void te::qt::widgets::DataSetOptionsWizardPage::checkModificationsOnFocusChange(QWidget* old, QWidget* now)
+//{
+//  if(old == m_ui->m_datasetNameLineEdit)
+//  {
+//    te::da::DataSetTypePtr dataset = getSelectedDataSet();
+//
+//    if(dataset.get() == 0)
+//      return;
+//
+//    std::string name = m_ui->m_datasetNameLineEdit->text().trimmed().toUtf8().data();
+//
+//    if(name != dataset->getName())
+//    {
+//      dataset->setName(name);
+//      m_ui->m_applyChangesPushButton->setEnabled(true);
+//    }
+//  }
+//  else if(old == m_ui->m_datasetTitleLineEdit)
+//  {
+//    te::da::DataSetTypePtr dataset = getSelectedDataSet();
+//
+//    if(dataset.get() == 0)
+//      return;
+//
+//    std::string title = m_ui->m_datasetTitleLineEdit->text().trimmed().toUtf8().data();
+//
+//    if(title != dataset->getTitle())
+//    {
+//      dataset->setTitle(title);
+//      m_ui->m_applyChangesPushButton->setEnabled(true);
+//    }
+//  }
+//  else if(old == m_ui->m_sridLineEdit)
+//  {
+//    te::da::DataSetTypePtr dataset = getSelectedDataSet();
+//
+//    if(dataset.get() == 0)
+//      return;
+//
+//    if(!dataset->hasGeom())
+//      return;
+//
+//    te::gm::GeometryProperty* gp = dataset->getDefaultGeomProperty();
+//
+//    int srid = boost::lexical_cast<int>(m_ui->m_sridLineEdit->text().trimmed().toUtf8().data());
+//
+//    if(srid != gp->getSRID())
+//    {
+//      gp->setSRID(srid);
+//      m_ui->m_applyChangesPushButton->setEnabled(true);
+//    }
+//  }
+//}
+
+te::da::DataSetTypePtr te::qt::widgets::DataSetOptionsWizardPage::getSelectedDataSet() const
+{
+   QListWidgetItem* item = m_ui->m_selectedDatasetListWidget->currentItem();
+
+  if(item == nullptr)
+    return te::da::DataSetTypePtr();
+
+  std::string dataSetAdapterName = item->text().toUtf8().data();
+
+  std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>::const_iterator it = m_datasets.begin();
+
+  while(it != m_datasets.end())
+  {
+    if(it->second->getConvertee()->getName() == dataSetAdapterName)
+    {
+      return it->first;
+    }
+    ++it;
+  }
+ 
+  return te::da::DataSetTypePtr();
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::clearForm()
+{
+  m_ui->m_datasetNameLineEdit->clear();
+  m_ui->m_datasetTitleLineEdit->clear();
+  m_ui->m_sridInputLineEdit->clear();
+  m_ui->m_sridOutputLineEdit->clear();
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::setControlsEnabled(bool enabled)
+{
+  m_ui->m_datasetNameLineEdit->setEnabled(enabled);
+  m_ui->m_datasetTitleLineEdit->setEnabled(enabled);
+  m_ui->m_sridInputLineEdit->setEnabled(enabled);
+  m_ui->m_sridInputPushButton->setEnabled(enabled);
+  m_ui->m_sridOutputLineEdit->setEnabled(enabled);
+  m_ui->m_sridOutputPushButton->setEnabled(enabled);
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::fillCharEncodingTypes()
+{
+  m_ui->m_encodingComboBox->clear();
+
+  std::vector<std::string> etNames = te::core::CharEncoding::getEncodingList();
+
+  for (std::size_t t = 0; t < etNames.size(); ++t)
+    m_ui->m_encodingComboBox->addItem(etNames[t].c_str());
+}
+
+void te::qt::widgets::DataSetOptionsWizardPage::previewData(QListWidgetItem* item, bool isResult)
+{
+  if (m_ui->m_dataPreviewGroupBox->isChecked() == false)
+  {
+    m_tblView->setDataSet(nullptr);
+    return;
+  }
+    
+
+  te::da::DataSourcePtr ds = te::da::DataSourceManager::getInstance().get(m_datasource->getId(), m_datasource->getAccessDriver(), m_datasource->getConnInfo());
+
+  if (ds.get() == nullptr)
+    return;
+
+  if (!ds->isOpened())
+    ds->open();
+
+  ScopedCursor wcursor(Qt::WaitCursor);
+
+  te::da::DataSet* datasetPreview = nullptr;
+
+  std::string dataSetAdapterName = item->text().toUtf8().data();
+
+  std::map<te::da::DataSetTypePtr, te::da::DataSetTypeConverter*>::iterator it = m_datasets.begin();
+
+  while (it != m_datasets.end())
+  {
+    if (it->second->getConvertee()->getName() == dataSetAdapterName)
+    {
+      if (isResult)
+      {
+        te::da::DataSet* dataset = ds->getDataSet(it->first->getName()).release();
+
+        std::unique_ptr<te::da::DataSetAdapter> dsAdapter(te::da::CreateAdapter(dataset, it->second, true));
+
+        datasetPreview = dsAdapter.release();
+      }
+      else
+      {
+        datasetPreview = ds->getDataSet(it->first->getName()).release();
+      }
+
+      break;
+    }
+    ++it;
+  }
+
+  if (datasetPreview)
+  {
+    m_tblView->setDataSet(datasetPreview);
+    m_tblView->resizeColumnsToContents();
+    m_tblView->show();
+  }
+}
+
+te::qt::widgets::DataSetOptionsWizardPage::FindByName::FindByName(const QString& name)
+{
+  m_name = name.toUtf8().data();
+}
+
+bool te::qt::widgets::DataSetOptionsWizardPage::FindByName::operator()(const te::da::DataSetTypePtr& dataset) const
+{
+  return dataset->getName() == m_name;
+}
+

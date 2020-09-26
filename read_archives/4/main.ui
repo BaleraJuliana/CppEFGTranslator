@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DataSetOptionsWizardPageForm</class>
+ <widget class="QWizardPage" name="DataSetOptionsWizardPageForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>836</width>
+    <height>482</height>
+   </rect>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::NoFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string>WizardPage</string>
+  </property>
+  <property name="title">
+   <string>Transfer Options</string>
+  </property>
+  <property name="subTitle">
+   <string>You can provide more information on how the datasets will be transferred and mapped to the target data source</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_12">
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::West</enum>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="widget">
+      <attribute name="title">
+       <string>Datasets</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_11">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_10">
+         <item row="0" column="0">
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="title">
+            <string>Selected datasets</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_6">
+            <item row="0" column="0">
+             <widget class="QListWidget" name="m_selectedDatasetListWidget">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QGroupBox" name="groupBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="title">
+            <string>Target dataset information</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_4">
+              <item row="0" column="0">
+               <layout class="QGridLayout" name="gridLayout_2">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_3">
+                  <property name="text">
+                   <string>Name</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLineEdit" name="m_datasetNameLineEdit">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_4">
+                  <property name="text">
+                   <string>Title</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLineEdit" name="m_datasetTitleLineEdit">
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_5">
+                  <property name="text">
+                   <string>Encoding</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QComboBox" name="m_encodingComboBox"/>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="label_8">
+                  <property name="text">
+                   <string>Input SRID</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <layout class="QGridLayout" name="gridLayout">
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_9">
+                    <property name="text">
+                     <string>Output SRID</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QLineEdit" name="m_sridOutputLineEdit">
+                    <property name="maximumSize">
+                     <size>
+                      <width>70</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
+                   <widget class="QPushButton" name="m_sridOutputPushButton">
+                    <property name="toolTip">
+                     <string>Config the output Map SRS</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="m_sridInputPushButton">
+                    <property name="toolTip">
+                     <string>Config the input Map SRS</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLineEdit" name="m_sridInputLineEdit">
+                    <property name="maximumSize">
+                     <size>
+                      <width>70</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <layout class="QGridLayout" name="gridLayout_3">
+                <item row="0" column="1">
+                 <spacer name="verticalSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>40</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item row="1" column="0">
+                 <spacer name="horizontalSpacer_2">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="m_applyPushButton">
+                  <property name="text">
+                   <string>Apply</string>
+                  </property>
+                  <property name="autoDefault">
+                   <bool>true</bool>
+                  </property>
+                  <property name="default">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QGroupBox" name="m_dataPreviewGroupBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="title">
+            <string>Preview</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_9">
+            <item row="0" column="0">
+             <widget class="QFrame" name="m_dataPreviewFrame">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Properties</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_8">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_7">
+         <item row="0" column="0">
+          <widget class="QWidget" name="m_dataSetWidget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QWidget" name="m_constraintWidget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>m_selectedDatasetListWidget</tabstop>
+  <tabstop>m_datasetNameLineEdit</tabstop>
+  <tabstop>m_datasetTitleLineEdit</tabstop>
+  <tabstop>m_encodingComboBox</tabstop>
+  <tabstop>m_sridInputLineEdit</tabstop>
+  <tabstop>m_sridInputPushButton</tabstop>
+  <tabstop>m_sridOutputLineEdit</tabstop>
+  <tabstop>m_sridOutputPushButton</tabstop>
+  <tabstop>m_applyPushButton</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
