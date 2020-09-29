@@ -1,5 +1,7 @@
 # CppEFGTraslator
 
+Translator from Qt-extended C++ into Event Flow Graph (EFG).
+
 A. Input files: "cpp" and "ui".
 <br> <br>
 
