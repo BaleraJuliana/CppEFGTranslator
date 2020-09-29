@@ -1,23 +1,28 @@
-# CppEFGTraslator
 
-Translator from Qt-extended C++ into Event Flow Graph (EFG).
+This software translates Qt-extended C++ code into an Event Flow Graph (EFG) to support Model-Driven Development. 
 
-A. Input files: "cpp" and "ui".
-<br> <br>
+Running
 
-B. Where you should place the input files: inside the "read_archives" folder,
-                                                following the structure according to
-                                                examples present within that folder.
-<br>
-C. Where will the output files be: inside the "dots" and "case_studies" folders.
-<br>
-Step by step...
+In order to run, consider the following steps:
 
-- 1. Create the "case_studies" and "dots" folders in the project root.
-- 2. Add the case studies to the "read_archives" folder.
-- 3. Adpate the paths in the "Main" class.
-- 4. Select the case study by modifying the "estudo_caso" variable.
-- 5. Run the program.
-- 6. After the execution is finished, if everything goes well, In the folder "dots"
-    there will be a .dot file for the selected case study, and
-    in the "case_studie" folder there will be a pdf referring to the generated pain graph.
+1. The input files are "cpp" and "ui". These input files should be placed in the "read_archives" folder, following the structure according to the examples present within that folder.
+
+2. Create the "case_studies" and "dots" folders in the project root. The output files will be in these folders.
+
+3. Add the files related to a case study into the "read_archives" folder.
+
+4. Adapt the paths in the "Main" class.
+
+5. Select the case study by modifying the "estudo_caso" variable.
+
+6. Run the program.
+
+7. After the execution is finished, the "dots" folder will have the EFG in .dot file format for the selected case study and, in the "case_studies" folder, the EFG is in .pdf format.  
+
+Author 
+
+Juliana Marino Balera
+
+Licence 
+
+This project is licensed under the GNU GENERAL PUBLIC LICENSE, Version 3 (GPLv3) - see the LICENSE.md file for details.
