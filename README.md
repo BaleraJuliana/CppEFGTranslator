@@ -1,3 +1,4 @@
+# CppEFGTranslator
 
 This software translates Qt-extended C++ code into an Event Flow Graph (EFG) to support Model-Driven Development. 
 
