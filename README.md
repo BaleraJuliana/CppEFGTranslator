@@ -1,6 +1,6 @@
 # CppEFGTranslator :computer:
 
-Project status: complete :heavy_check_mark:
+> Project status: complete :heavy_check_mark:
 
 This software translates Qt-extended C++ code into an Event Flow Graph (EFG) to support Model-Driven Development. 
 
@@ -26,6 +26,6 @@ In order to run, consider the following steps:
 
 Juliana Marino Balera
 
-## Licence  
+## Licence :balance_scale:  
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE, Version 3 (GPLv3) - see the LICENSE.md file for details.
