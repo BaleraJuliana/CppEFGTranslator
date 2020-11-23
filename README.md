@@ -1,6 +1,7 @@
 # CppEFGTranslator :computer:
 
 > Project status: complete :heavy_check_mark:
+> Author: Juliana Marino Balera :busts_in_silhouette:
 
 This software translates Qt-extended C++ code into an Event Flow Graph (EFG) to support Model-Driven Development. 
 
@@ -21,10 +22,6 @@ In order to run, consider the following steps:
 6. Run the program.
 
 7. After the execution is finished, the "dots" folder will have the EFG in .dot file format for the selected case study and, in the "case_studies" folder, the EFG is in .pdf format.  
-
-## Author :busts_in_silhouette:
-
-Juliana Marino Balera
 
 ## Licence :balance_scale:  
 
